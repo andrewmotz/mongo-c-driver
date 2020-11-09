@@ -1,0 +1,56 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_binary(
+    name = "bcon-col-view",
+    srcs = ["bcon-col-view.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+cc_binary(
+    name = "bcon-speed",
+    srcs = ["bcon-speed.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+cc_binary(
+    name = "bson-check-depth",
+    srcs = ["bson-check-depth.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+cc_binary(
+    name = "bson-metrics",
+    srcs = ["bson-metrics.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+# cc_binary(
+#     name = "bson-streaming-reader",
+#     srcs = ["bson-streaming-reader.c"],
+#     deps = ["//src/libbson/src/bson"],
+# )
+
+cc_binary(
+    name = "bson-to-json",
+    srcs = ["bson-to-json.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+cc_binary(
+    name = "bson-validate",
+    srcs = ["bson-validate.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+
+cc_binary(
+    name = "hello_bson",
+    srcs = ["hello_bson.c"],
+    deps = ["//src/libbson/src/bson"],
+)
+
+cc_binary(
+    name = "json-to-bson",
+    srcs = ["json-to-bson.c"],
+    deps = ["//src/libbson/src/bson"],
+)

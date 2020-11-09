@@ -21,6 +21,7 @@ Makefile
 test-results.json
 VERSION_CURRENT
 VERSION_RELEASED
+/.vscode
 
 # Windows things
 *.sdf
@@ -30,3 +31,6 @@ VERSION_RELEASED
 Debug
 install_manifest.txt
 x64
+
+# Bazel
+/bazel-*

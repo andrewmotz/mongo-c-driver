@@ -1,0 +1,46 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["bson-config.h.in"])
+
+cc_library(
+    name = "bson_prelude",
+    visibility = ["//:__subpackages__"],
+    hdrs = ["bson-prelude.h"],
+    strip_include_prefix = ".",
+    includes = ["."],
+)
+
+cc_library(
+    name = "bson_hdrs",
+    hdrs = glob(["*.h"], exclude = ["*-private.h"]),
+    includes = ["."],
+    strip_include_prefix = ".",
+    include_prefix = "bson",
+    deps = [
+        ":bson_prelude",
+        "@bson_config//:bson_config_internal",
+        "@bson_config//:bson_config",
+        "@bson_config//:bson_version_internal",
+        "@bson_config//:bson_version",
+    ],
+)
+
+cc_library(
+    name = "bson",
+    srcs = glob(["*.c", "*-private.h"]),
+    defines = ["BSON_COMPILATION"],
+    deps = [
+        ":bson_prelude",
+        ":bson_hdrs",
+        "//src/common",
+        "//src/common:common_private",
+        "//src/libbson/src/jsonsl",
+        "@bson_config//:bson_config_internal",
+        "@bson_config//:bson_version",
+    ],
+    linkopts = [
+        "-DEFAULTLIB:Ws2_32",
+    ],
+)

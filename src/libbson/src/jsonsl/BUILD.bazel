@@ -1,0 +1,16 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "jsonsl",
+    visibility = ["//:__subpackages__"],
+    hdrs = glob(["*.h"]),
+    srcs = glob(["*.c"]),
+    strip_include_prefix = ".",
+    include_prefix = "jsonsl",
+    includes = ["."],
+    defines = ["BSON_COMPILATION"],
+    deps = [
+        "//src/libbson/src/bson:bson_prelude",
+        "//src/libbson/src/bson:bson_hdrs",
+    ],
+)

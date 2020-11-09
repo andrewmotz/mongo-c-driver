@@ -1,0 +1,38 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["common-config.h.in"])
+
+cc_library(
+    name = "common_prelude",
+    visibility = ["//visibility:private"],
+    strip_include_prefix = ".",
+    hdrs = ["common-prelude.h"],
+)
+
+cc_library(
+    name = "common_private",
+    visibility = ["//src:__subpackages__"],
+    hdrs = glob(["*-private.h"], exclude = ["common-prelude.h"]),
+    strip_include_prefix = ".",
+    deps = [
+        ":common_prelude",
+        "//src/libbson/src/bson:bson_hdrs",
+        "@mongo_c_driver_common_config//:common_config",
+    ],
+)
+
+cc_library(
+    name = "common",
+    visibility = ["//src:__subpackages__"],
+    hdrs = glob(["*.h",]),
+    srcs = glob(["*.c"]),
+    defines = ["BSON_COMPILATION", "MONGOC_COMPILATION"],
+    deps = [
+        ":common_prelude",
+        ":common_private",
+        "//src/libbson/src/bson:bson_hdrs",
+        "@mongo_c_driver_common_config//:common_config",
+    ],
+)
