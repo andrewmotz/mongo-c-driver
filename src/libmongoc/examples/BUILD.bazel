@@ -1,0 +1,100 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+cc_binary(
+    name = "example-client",
+    srcs = ["example-client.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-collection-watch",
+    srcs = ["example-collection-watch.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-command-monitoring",
+    srcs = ["example-command-monitoring.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-command-with-opts",
+    srcs = ["example-command-with-opts.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-create-indexes",
+    srcs = ["example-create-indexes.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-gridfs-bucket",
+    srcs = ["example-gridfs-bucket.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-gridfs",
+    srcs = ["example-gridfs.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-pool",
+    srcs = ["example-pool.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+    tags = ["manual"],
+)
+
+cc_binary(
+    name = "example-resume",
+    srcs = ["example-resume.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+    tags = ["manual"],
+)
+
+cc_binary(
+    name = "example-scram",
+    srcs = ["example-scram.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-sdam-monitoring",
+    srcs = ["example-sdam-monitoring.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-session",
+    srcs = ["example-session.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-start-at-optime",
+    srcs = ["example-start-at-optime.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-transaction",
+    srcs = ["example-transaction.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-update",
+    srcs = ["example-update.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+
+cc_binary(
+    name = "example-with-transaction-cb",
+    srcs = ["example-with-transaction-cb.c"],
+    deps = ["//src/libmongoc/src/mongoc"],
+)
+

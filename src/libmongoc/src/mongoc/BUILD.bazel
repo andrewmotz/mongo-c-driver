@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//:__subpackages__"])
+
+exports_files(["mongoc-config.h.in", "mongoc-version.h.in"])
+
+cc_library(
+    name = "mongoc",
+    hdrs = glob(["*.h"]),
+    srcs = glob(["*.c"]),
+    strip_include_prefix = ".",
+    include_prefix = "mongoc",
+    includes = ["."],
+    defines = ["MONGOC_COMPILATION"],
+    deps = [
+        "//src/libbson/src/bson",
+        "@mongoc_config//:mongoc_config",
+        "@mongoc_config//:mongoc_version",
+    ],
+    linkopts = [
+        "-DEFAULTLIB:Advapi32",
+    ],
+)

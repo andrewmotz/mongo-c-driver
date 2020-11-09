@@ -41,6 +41,22 @@ cc_library(
 )
 """
 
+_mongoc_config_build_file_contents = """
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "mongoc_config",
+    hdrs = ["mongoc-config.h"],
+)
+
+cc_library(
+    name = "mongoc_version",
+    hdrs = ["mongoc-version.h"],
+)
+"""
+
 def _bson_config_implementation(rctx):
     bson_version = "1.17.1."
     bson_os = "1" if rctx.os.name.find("windows") == -1 else "2"
@@ -139,12 +155,88 @@ def mongo_c_driver_common_config(**kwargs):
     _common_config(name = "mongo_c_driver_common_config", **kwargs)
 
 def _mongoc_config_implementation(rctx):
-    return
+    mongoc_version = "1.17.1."
+
+    rctx.template(
+        "mongoc-config.h",
+        rctx.path(rctx.attr.mongoc_config_template),
+        executable = False,
+        substitutions = {
+            # Compiler info
+            "@MONGOC_USER_SET_CFLAGS@": "",
+            "@MONGOC_USER_SET_LDFLAGS@": "",
+            "@MONGOC_CC@": "",
+
+            # Options
+            "@MONGOC_ENABLE_SSL_SECURE_CHANNEL@": "0",
+            "@MONGOC_ENABLE_CRYPTO_CNG@": "0",
+            "@MONGOC_ENABLE_SSL_SECURE_TRANSPORT@": "0",
+            "@MONGOC_ENABLE_CRYPTO_COMMON_CRYPTO@": "0",
+            "@MONGOC_ENABLE_SSL_LIBRESSL@": "0",
+            "@MONGOC_ENABLE_SSL_OPENSSL@": "0",
+            "@MONGOC_ENABLE_CRYPTO_LIBCRYPTO@": "0",
+            "@MONGOC_ENABLE_SSL@": "0",
+            "@MONGOC_ENABLE_CRYPTO@": "0",
+            "@MONGOC_ENABLE_CRYPTO_SYSTEM_PROFILE@": "0",
+            "@MONGOC_HAVE_ASN1_STRING_GET0_DATA@": "0",
+            "@MONGOC_ENABLE_SASL@": "0",
+            "@MONGOC_ENABLE_SASL_CYRUS@": "0",
+            "@MONGOC_ENABLE_SASL_SSPI@": "0",
+            "@MONGOC_HAVE_SASL_CLIENT_DONE@": "0",
+            "@MONGOC_NO_AUTOMATIC_GLOBALS@": "0",
+            "@MONGOC_HAVE_SOCKLEN@": "0",
+            "@MONGOC_HAVE_DNSAPI@": "0",
+            "@MONGOC_HAVE_RES_NSEARCH@": "0",
+            "@MONGOC_HAVE_RES_NDESTROY@": "0",
+            "@MONGOC_HAVE_RES_NCLOSE@": "0",
+            "@MONGOC_HAVE_RES_SEARCH@": "0",
+            "@MONGOC_SOCKET_ARG2@": "struct sockaddr",
+            "@MONGOC_SOCKET_ARG3@": "int",
+            "@MONGOC_ENABLE_COMPRESSION@": "0",
+            "@MONGOC_ENABLE_COMPRESSION_SNAPPY@": "0",
+            "@MONGOC_ENABLE_COMPRESSION_ZLIB@": "0",
+            "@MONGOC_ENABLE_COMPRESSION_ZSTD@": "0",
+            "@MONGOC_ENABLE_SHM_COUNTERS@": "0",
+            "@MONGOC_ENABLE_RDTSCP@": "0",
+            "@MONGOC_HAVE_SCHED_GETCPU@": "0",
+            "@MONGOC_TRACE@": "0",
+            "@MONGOC_ENABLE_ICU@": "0",
+            "@MONGOC_ENABLE_CLIENT_SIDE_ENCRYPTION@": "0",
+            "@MONGOC_HAVE_SS_FAMILY@": "0",
+            "@MONGOC_ENABLE_MONGODB_AWS_AUTH@": "0",
+        },
+    )
+
+    rctx.template(
+        "mongoc-version.h",
+        rctx.path(rctx.attr.mongoc_version_template),
+        executable = False,
+        substitutions = {
+            "@MONGOC_MAJOR_VERSION@": "({})".format(mongoc_version.split('.')[0]),
+            "@MONGOC_MINOR_VERSION@": "({})".format(mongoc_version.split('.')[1]),
+            "@MONGOC_MICRO_VERSION@": "({})".format(mongoc_version.split('.')[2]),
+            "@MONGOC_PRERELEASE_VERSION@": "\"{}\"".format(mongoc_version.split('.')[3]),
+            "@MONGOC_VERSION@": "{}".format(mongoc_version),
+        },
+    )
+
+    rctx.file(
+        "BUILD.bazel",
+        content = _mongoc_config_build_file_contents,
+        executable = False,
+    )
 
 _mongoc_config = repository_rule(
     implementation = _mongoc_config_implementation,
     attrs = {
-
+        "mongoc_config_template": attr.label(
+            default = Label("@bazelregistry_mongo_c_driver//src/libmongoc/src/mongoc:mongoc-config.h.in"),
+            allow_single_file = True,
+        ),
+        "mongoc_version_template": attr.label(
+            default = Label("@bazelregistry_mongo_c_driver//src/libmongoc/src/mongoc:mongoc-version.h.in"),
+            allow_single_file = True,
+        ),
     },
 )
 
