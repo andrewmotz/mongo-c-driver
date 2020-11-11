@@ -183,7 +183,7 @@ def _mongoc_config_implementation(rctx):
             "@MONGOC_ENABLE_SASL_CYRUS@": "0",
             "@MONGOC_ENABLE_SASL_SSPI@": "0",
             "@MONGOC_HAVE_SASL_CLIENT_DONE@": "0",
-            "@MONGOC_NO_AUTOMATIC_GLOBALS@": "0",
+            "@MONGOC_NO_AUTOMATIC_GLOBALS@": "1",
             "@MONGOC_HAVE_SOCKLEN@": "0",
             "@MONGOC_HAVE_DNSAPI@": "0",
             "@MONGOC_HAVE_RES_NSEARCH@": "0",
