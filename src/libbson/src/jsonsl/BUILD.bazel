@@ -4,7 +4,7 @@ cc_library(
     name = "jsonsl",
     visibility = ["//:__subpackages__"],
     hdrs = glob(["*.h"]),
-    srcs = glob(["*.c"]),
+    srcs = glob(["*.c", "*.h"]),
     strip_include_prefix = ".",
     include_prefix = "jsonsl",
     includes = ["."],

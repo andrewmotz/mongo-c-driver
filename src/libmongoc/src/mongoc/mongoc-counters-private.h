@@ -126,13 +126,13 @@ typedef struct {
 
 #define COUNTER(ident, Category, Name, Description) \
    extern mongoc_counter_t __mongoc_counter_##ident;
-#include "mongoc-counters.defs"
+#include "mongoc-counters.inl"
 #undef COUNTER
 
 
 enum {
 #define COUNTER(ident, Category, Name, Description) COUNTER_##ident,
-#include "mongoc-counters.defs"
+#include "mongoc-counters.inl"
 #undef COUNTER
    LAST_COUNTER
 };
@@ -163,7 +163,7 @@ enum {
       }                                                               \
       bson_memory_barrier ();                                         \
    }
-#include "mongoc-counters.defs"
+#include "mongoc-counters.inl"
 #undef COUNTER
 #else
 /* when counters are disabled, these functions are no-ops */
@@ -180,7 +180,7 @@ enum {
    static BSON_INLINE void mongoc_counter_##ident##_reset (void)      \
    {                                                                  \
    }
-#include "mongoc-counters.defs"
+#include "mongoc-counters.inl"
 #undef COUNTER
 #endif
 

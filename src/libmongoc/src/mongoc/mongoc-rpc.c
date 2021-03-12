@@ -152,15 +152,15 @@
    _mongoc_array_append_val (array, iov);
 
 
-#include "op-delete.def"
-#include "op-get-more.def"
-#include "op-insert.def"
-#include "op-kill-cursors.def"
-#include "op-msg.def"
-#include "op-query.def"
-#include "op-reply.def"
-#include "op-compressed.def"
-#include "op-update.def"
+#include "op-delete.inl"
+#include "op-get-more.inl"
+#include "op-insert.inl"
+#include "op-kill-cursors.inl"
+#include "op-msg.inl"
+#include "op-query.inl"
+#include "op-reply.inl"
+#include "op-compressed.inl"
+#include "op-update.inl"
 
 
 #undef RPC
@@ -210,15 +210,15 @@
    } while (0);
 
 
-#include "op-delete.def"
-#include "op-get-more.def"
-#include "op-insert.def"
-#include "op-kill-cursors.def"
-#include "op-msg.def"
-#include "op-query.def"
-#include "op-reply.def"
-#include "op-compressed.def"
-#include "op-update.def"
+#include "op-delete.inl"
+#include "op-get-more.inl"
+#include "op-insert.inl"
+#include "op-kill-cursors.inl"
+#include "op-msg.inl"
+#include "op-query.inl"
+#include "op-reply.inl"
+#include "op-compressed.inl"
+#include "op-update.inl"
 
 #undef RPC
 #undef INT64_ARRAY_FIELD
@@ -239,15 +239,15 @@
    } while (0);
 
 
-#include "op-delete.def"
-#include "op-get-more.def"
-#include "op-insert.def"
-#include "op-kill-cursors.def"
-#include "op-msg.def"
-#include "op-query.def"
-#include "op-reply.def"
-#include "op-compressed.def"
-#include "op-update.def"
+#include "op-delete.inl"
+#include "op-get-more.inl"
+#include "op-insert.inl"
+#include "op-kill-cursors.inl"
+#include "op-msg.inl"
+#include "op-query.inl"
+#include "op-reply.inl"
+#include "op-compressed.inl"
+#include "op-update.inl"
 
 #undef RPC
 #undef ENUM_FIELD
@@ -382,15 +382,15 @@
    } while (0);
 
 
-#include "op-delete.def"
-#include "op-get-more.def"
-#include "op-insert.def"
-#include "op-kill-cursors.def"
-#include "op-msg.def"
-#include "op-query.def"
-#include "op-reply.def"
-#include "op-compressed.def"
-#include "op-update.def"
+#include "op-delete.inl"
+#include "op-get-more.inl"
+#include "op-insert.inl"
+#include "op-kill-cursors.inl"
+#include "op-msg.inl"
+#include "op-query.inl"
+#include "op-reply.inl"
+#include "op-compressed.inl"
+#include "op-update.inl"
 
 
 #undef RPC
@@ -533,17 +533,17 @@
    buflen = 0;
 
 
-#include "op-delete.def"
-#include "op-get-more.def"
-#include "op-header.def"
-#include "op-insert.def"
-#include "op-kill-cursors.def"
-#include "op-msg.def"
-#include "op-query.def"
-#include "op-reply.def"
-#include "op-reply-header.def"
-#include "op-compressed.def"
-#include "op-update.def"
+#include "op-delete.inl"
+#include "op-get-more.inl"
+#include "op-header.inl"
+#include "op-insert.inl"
+#include "op-kill-cursors.inl"
+#include "op-msg.inl"
+#include "op-query.inl"
+#include "op-reply.inl"
+#include "op-reply-header.inl"
+#include "op-compressed.inl"
+#include "op-update.inl"
 
 
 #undef RPC

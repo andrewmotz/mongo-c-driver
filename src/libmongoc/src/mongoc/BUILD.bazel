@@ -7,7 +7,7 @@ exports_files(["mongoc-config.h.in", "mongoc-version.h.in"])
 cc_library(
     name = "mongoc",
     hdrs = glob(["*.h"]),
-    srcs = glob(["*.c"]),
+    srcs = glob(["*.c", "*.h", "*.inl"]),
     strip_include_prefix = ".",
     include_prefix = "mongoc",
     includes = ["."],
