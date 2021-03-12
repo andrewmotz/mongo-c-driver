@@ -1,0 +1,2 @@
+common --enable_platform_specific_config
+build:linux --crosstool_top=@llvm_toolchain//:toolchain
