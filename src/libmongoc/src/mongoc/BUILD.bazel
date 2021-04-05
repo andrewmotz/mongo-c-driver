@@ -8,10 +8,10 @@ exports_files(["mongoc-config.h.in", "mongoc-version.h.in"])
 _defines = [
     "MONGOC_COMPILATION",
     "MONGOC_NO_AUTOMATIC_GLOBALS=1",
-    "WIN32_LEAN_AND_MEAN",
 ]
 
 _ssl_defines = [
+    "MONGOC_HAVE_ASN1_STRING_GET0_DATA=1",
     "MONGOC_ENABLE_SSL=1",
     "MONGOC_ENABLE_SSL_OPENSSL=1",
     "MONGOC_ENABLE_CRYPTO=1",
@@ -54,6 +54,10 @@ cc_library(
         "//:no_ssl": [],
         "//:openssl": ["@openssl//:ssl"],
         "//:boringssl": ["@boringssl//:ssl"],
+    }),
+    copts = select({
+        "@bazel_tools//tools/cpp:msvc": ["/w"],
+        "//conditions:default": ["-w"],
     }),
     linkopts = [
         "-DEFAULTLIB:Advapi32",

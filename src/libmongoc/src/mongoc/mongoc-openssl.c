@@ -20,10 +20,14 @@
 
 #include <bson/bson.h>
 #include <limits.h>
+#include <openssl/opensslconf.h>
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/x509.h>
+#ifndef OPENSSL_NO_OCSP
 #include <openssl/ocsp.h>
+#endif
 #include <openssl/x509v3.h>
 #include <openssl/crypto.h>
 
