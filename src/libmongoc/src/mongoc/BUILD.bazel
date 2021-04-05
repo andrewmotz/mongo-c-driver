@@ -67,7 +67,7 @@ cc_library(
         "//conditions:default": ["-w"],
     }),
     linkopts = select({
-        "@platforms//os:windows": ["-DEFAULTLIB:Advapi32"],
+        "@platforms//os:windows": ["-DEFAULTLIB:Advapi32", "-DEFAULTLIB:Dnsapi"],
         "//conditions:default": ["-lresolv"],
     }),
 )
