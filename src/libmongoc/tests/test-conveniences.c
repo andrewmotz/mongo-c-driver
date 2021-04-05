@@ -38,6 +38,7 @@
 
 static bool gConveniencesInitialized = false;
 static mongoc_array_t gTmpBsonArray;
+static mongoc_array_t gTmpStringArray;
 
 static char *gHugeString;
 static size_t gHugeStringLength;
@@ -49,6 +50,7 @@ test_conveniences_init ()
 {
    if (!gConveniencesInitialized) {
       _mongoc_array_init (&gTmpBsonArray, sizeof (bson_t *));
+      _mongoc_array_init (&gTmpStringArray, sizeof (char *));
       atexit (test_conveniences_cleanup);
       gConveniencesInitialized = true;
       gHugeString = NULL;
@@ -69,7 +71,15 @@ test_conveniences_cleanup ()
          bson_destroy (doc);
       }
 
+      for (i = 0; i < gTmpStringArray.len; i++) {
+         char *str;
+
+         str = _mongoc_array_index (&gTmpStringArray, char *, i);
+         bson_free (str);
+      }
+
       _mongoc_array_destroy (&gTmpBsonArray);
+      _mongoc_array_destroy (&gTmpStringArray);
 
       bson_free (gHugeString);
       bson_free (gFourMBString);
@@ -127,7 +137,51 @@ tmp_bson (const char *json, ...)
    return doc;
 }
 
+MONGOC_PRINTF_FORMAT (1, 2)
+const char *
+tmp_str (const char *format, ...)
+{
+   va_list args;
+   char *str;
 
+   test_conveniences_init ();
+   va_start (args, format);
+   str = bson_strdupv_printf (format, args);
+   va_end (args);
+
+   _mongoc_array_append_val (&gTmpStringArray, str);
+   return (const char *) str;
+}
+
+const char *
+tmp_json (const bson_t *bson)
+{
+   char *str;
+
+   test_conveniences_init ();
+
+   if (!bson) {
+      return "(NULL)";
+   }
+
+   str = bson_as_canonical_extended_json (bson, NULL);
+   _mongoc_array_append_val (&gTmpStringArray, str);
+   return (const char *) str;
+}
+
+/* Look up a field by a dot separate path, or abort. */
+void
+bson_lookup (const bson_t *bson, const char *path, bson_iter_t *out)
+{
+   bson_iter_t iter;
+
+   bson_iter_init (&iter, bson);
+   if (!bson_iter_find_descendant (&iter, path, out)) {
+      fprintf (
+         stderr, "'%s' field not found in BSON: %s", path, tmp_json (bson));
+      abort ();
+   }
+}
 /*--------------------------------------------------------------------------
  *
  * bson_iter_bson --
@@ -167,13 +221,14 @@ const char *
 bson_lookup_utf8 (const bson_t *b, const char *key)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   bson_iter_init (&iter, b);
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   BSON_ASSERT (BSON_ITER_HOLDS_UTF8 (&descendent));
+   bson_lookup (b, key, &iter);
+   ASSERT_WITH_MSG (BSON_ITER_HOLDS_UTF8 (&iter),
+                    "'%s' is not a string: %s",
+                    key,
+                    tmp_json (b));
 
-   return bson_iter_utf8 (&descendent, NULL);
+   return bson_iter_utf8 (&iter, NULL);
 }
 
 
@@ -189,13 +244,25 @@ void
 bson_lookup_value (const bson_t *b, const char *key, bson_value_t *value)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   BSON_ASSERT (bson_iter_init (&iter, b));
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   bson_value_copy (bson_iter_value (&descendent), value);
+   bson_lookup (b, key, &iter);
+   bson_value_copy (bson_iter_value (&iter), value);
 }
 
+bson_t *
+bson_lookup_bson (const bson_t *b, const char *key)
+{
+   bson_iter_t iter;
+   bson_t tmp;
+
+   bson_lookup (b, key, &iter);
+   if (!BSON_ITER_HOLDS_DOCUMENT (&iter) && !BSON_ITER_HOLDS_ARRAY (&iter)) {
+      test_error ("Expected '%s' to resolve to BSON: %s", key, tmp_json (b));
+   }
+
+   bson_iter_bson (&iter, &tmp);
+   return bson_new_from_data (bson_get_data (&tmp), tmp.len);
+}
 
 /*--------------------------------------------------------------------------
  *
@@ -211,23 +278,19 @@ void
 bson_lookup_doc (const bson_t *b, const char *key, bson_t *doc)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   bson_iter_init (&iter, b);
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   bson_iter_bson (&descendent, doc);
+   bson_lookup (b, key, &iter);
+   bson_iter_bson (&iter, doc);
 }
 
 void
 bson_lookup_doc_null_ok (const bson_t *b, const char *key, bson_t *doc)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   BSON_ASSERT (bson_iter_init (&iter, b));
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   if (!BSON_ITER_HOLDS_NULL (&descendent)) {
-      bson_iter_bson (&descendent, doc);
+   bson_lookup (b, key, &iter);
+   if (!BSON_ITER_HOLDS_NULL (&iter)) {
+      bson_iter_bson (&iter, doc);
    } else {
       bson_init (doc);
    }
@@ -246,13 +309,14 @@ bool
 bson_lookup_bool (const bson_t *b, const char *key)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   bson_iter_init (&iter, b);
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   BSON_ASSERT (BSON_ITER_HOLDS_BOOL (&descendent));
+   bson_lookup (b, key, &iter);
+   ASSERT_WITH_MSG (BSON_ITER_HOLDS_BOOL (&iter),
+                    "'%s' is not a bool: %s",
+                    key,
+                    tmp_json (b));
 
-   return bson_iter_bool (&descendent);
+   return bson_iter_bool (&iter);
 }
 
 
@@ -268,13 +332,14 @@ int32_t
 bson_lookup_int32 (const bson_t *b, const char *key)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   bson_iter_init (&iter, b);
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   BSON_ASSERT (BSON_ITER_HOLDS_INT32 (&descendent));
+   bson_lookup (b, key, &iter);
+   ASSERT_WITH_MSG (BSON_ITER_HOLDS_INT32 (&iter),
+                    "'%s' is not a int32: %s",
+                    key,
+                    tmp_json (b));
 
-   return bson_iter_int32 (&descendent);
+   return bson_iter_int32 (&iter);
 }
 
 
@@ -290,13 +355,14 @@ int64_t
 bson_lookup_int64 (const bson_t *b, const char *key)
 {
    bson_iter_t iter;
-   bson_iter_t descendent;
 
-   bson_iter_init (&iter, b);
-   BSON_ASSERT (bson_iter_find_descendant (&iter, key, &descendent));
-   BSON_ASSERT (BSON_ITER_HOLDS_INT64 (&descendent));
+   bson_lookup (b, key, &iter);
+   ASSERT_WITH_MSG (BSON_ITER_HOLDS_INT64 (&iter),
+                    "'%s' is not a int64: %s",
+                    key,
+                    tmp_json (b));
 
-   return bson_iter_int64 (&descendent);
+   return bson_iter_int64 (&iter);
 }
 
 
@@ -1824,4 +1890,85 @@ assert_wc_oob_error (bson_error_t *error)
          ASSERT_CMPINT (error->code, ==, 2);
       }
    }
+}
+
+void
+semver_parse (const char *str, semver_t *out)
+{
+   char *dot;
+
+   memset (out, 0, sizeof (semver_t));
+   out->major = (int) bson_ascii_strtoll (str, &dot, 10);
+   if (*dot == '.') {
+      dot++;
+   } else {
+      return;
+   }
+   out->has_minor = true;
+   out->minor = (int) bson_ascii_strtoll (dot, &dot, 10);
+
+   if (*dot == '.') {
+      dot++;
+   } else {
+      return;
+   }
+   out->has_patch = true;
+   out->patch = (int) bson_ascii_strtoll (dot, &dot, 10);
+}
+
+void
+server_semver (mongoc_client_t *client, semver_t *out)
+{
+   bson_t reply;
+   bson_error_t error;
+   const char *server_version_str;
+
+   ASSERT_OR_PRINT (
+      mongoc_client_command_simple (
+         client, "admin", tmp_bson ("{'buildinfo': 1}"), NULL, &reply, &error),
+      error);
+
+   server_version_str = bson_lookup_utf8 (&reply, "version");
+   semver_parse (server_version_str, out);
+
+   bson_destroy (&reply);
+}
+
+int
+semver_cmp (semver_t *a, semver_t *b)
+{
+   if (a->major < b->major) {
+      return -1;
+   } else if (a->major > b->major) {
+      return 1;
+   }
+
+   if (a->minor < b->minor) {
+      return -1;
+   } else if (a->minor > b->minor) {
+      return 1;
+   }
+
+   if (a->patch < b->patch) {
+      return -1;
+   } else if (a->patch > b->patch) {
+      return 1;
+   }
+
+   return 0;
+}
+
+int
+semver_cmp_str (semver_t *a, const char *str)
+{
+   semver_t b;
+
+   semver_parse (str, &b);
+   return semver_cmp (a, &b);
+}
+
+const char *
+semver_to_string (semver_t *semver)
+{
+   return tmp_str ("%d.%d.%d", semver->major, semver->minor, semver->patch);
 }

@@ -265,6 +265,9 @@ all_tasks = [
     CompileTask('debug-compile-nosasl-openssl',
                 tags=['debug-compile', 'nosasl', 'openssl'],
                 SSL='OPENSSL'),
+    CompileTask('debug-compile-nosasl-openssl-static',
+                tags=['debug-compile', 'nosasl', 'openssl-static'],
+                SSL='OPENSSL_STATIC'),
     CompileTask('debug-compile-nosasl-darwinssl',
                 tags=['debug-compile', 'nosasl', 'darwinssl'],
                 SSL='DARWIN'),
@@ -279,6 +282,10 @@ all_tasks = [
                 tags=['debug-compile', 'sasl', 'openssl'],
                 SASL='AUTO',
                 SSL='OPENSSL'),
+    CompileTask('debug-compile-sasl-openssl-static',
+                tags=['debug-compile', 'sasl', 'openssl-static'],
+                SASL='AUTO',
+                SSL='OPENSSL_STATIC'),
     CompileTask('debug-compile-sasl-darwinssl',
                 tags=['debug-compile', 'sasl', 'darwinssl'],
                 SASL='AUTO',
@@ -296,6 +303,10 @@ all_tasks = [
                 tags=['debug-compile', 'sspi', 'openssl'],
                 SASL='SSPI',
                 SSL='OPENSSL'),
+    CompileTask('debug-compile-sspi-openssl-static',
+                tags=['debug-compile', 'sspi', 'openssl-static'],
+                SASL='SSPI',
+                SSL='OPENSSL_STATIC'),
     CompileTask('debug-compile-rdtscp',
                 ENABLE_RDTSCP='ON'),
     CompileTask('debug-compile-sspi-winssl',
@@ -377,12 +388,18 @@ all_tasks = [
                                'sh .evergreen/debian_package_build.sh'),
                   s3_put(local_file='deb.tar.gz',
                          remote_file='${branch_name}/mongo-c-driver-debian-packages-${CURRENT_VERSION}.tar.gz',
+                         content_type='${content_type|application/x-gzip}'),
+                  s3_put(local_file='deb.tar.gz',
+                         remote_file='${project}/${branch_name}/${revision}/${version_id}/${build_id}/${execution}/mongo-c-driver-debian-packages.tar.gz',
                          content_type='${content_type|application/x-gzip}')]),
     NamedTask('rpm-package-build',
               commands=[
                   shell_mongoc('sh .evergreen/build_snapshot_rpm.sh'),
                   s3_put(local_file='rpm.tar.gz',
                          remote_file='${branch_name}/mongo-c-driver-rpm-packages-${CURRENT_VERSION}.tar.gz',
+                         content_type='${content_type|application/x-gzip}'),
+                  s3_put(local_file='rpm.tar.gz',
+                         remote_file='${project}/${branch_name}/${revision}/${version_id}/${build_id}/${execution}/mongo-c-driver-rpm-packages.tar.gz',
                          content_type='${content_type|application/x-gzip}')]),
     NamedTask('install-uninstall-check-mingw',
               depends_on=OD([('name', 'make-release-archive'),
@@ -409,6 +426,8 @@ all_tasks = [
                 CFLAGS='-Werror -Wno-cast-align'),
     CompileWithClientSideEncryption('debug-compile-sasl-openssl-cse', tags=[
         'debug-compile', 'sasl', 'openssl'], SASL="AUTO", SSL="OPENSSL"),
+    CompileWithClientSideEncryption('debug-compile-sasl-openssl-static-cse', tags=[
+        'debug-compile', 'sasl', 'openssl-static'], SASL="AUTO", SSL="OPENSSL_STATIC"),
     CompileWithClientSideEncryption('debug-compile-sasl-darwinssl-cse', tags=[
         'debug-compile', 'sasl', 'darwinssl'], SASL="AUTO", SSL="DARWIN"),
     CompileWithClientSideEncryption('debug-compile-sasl-winssl-cse', tags=[
@@ -423,7 +442,20 @@ all_tasks = [
                 CFLAGS='-fsanitize=thread -fno-omit-frame-pointer',
                 CHECK_LOG='ON',
                 SSL='OPENSSL',
-                EXTRA_CONFIGURE_FLAGS='-DENABLE_EXTRA_ALIGNMENT=OFF -DENABLE_SHM_COUNTERS=OFF')
+                EXTRA_CONFIGURE_FLAGS='-DENABLE_EXTRA_ALIGNMENT=OFF -DENABLE_SHM_COUNTERS=OFF'),
+    NamedTask('build-and-test-with-toolchain',
+              commands=[
+                  OD([('command', 's3.get'),
+                      ('params', OD([
+                          ('aws_key', '${toolchain_aws_key}'),
+                          ('aws_secret', '${toolchain_aws_secret}'),
+                          ('remote_file',
+                           'mongo-c-toolchain/${distro_id}/mongo-c-toolchain.tar.gz'),
+                          ('bucket', 'mongo-c-toolchain'),
+                          ('local_file', 'mongo-c-toolchain.tar.gz'),
+                      ]))]),
+                  shell_mongoc('sh ./.evergreen/build-and-test-with-toolchain.sh')
+                  ])
 ]
 
 class IntegrationTask(MatrixTask):
@@ -435,7 +467,7 @@ class IntegrationTask(MatrixTask):
                ('topology', ['server', 'replica_set', 'sharded_cluster']),
                ('auth', [True, False]),
                ('sasl', ['sasl', 'sspi', False]),
-               ('ssl', ['openssl', 'darwinssl', 'winssl', False]),
+               ('ssl', ['openssl', 'openssl-static', 'darwinssl', 'winssl', False]),
                ('cse', [True, False])])
 
     def __init__(self, *args, **kwargs):
@@ -721,7 +753,7 @@ all_tasks = chain(all_tasks, [
 
 class AuthTask(MatrixTask):
     axes = OD([('sasl', ['sasl', 'sspi', False]),
-               ('ssl', ['openssl', 'darwinssl', 'winssl'])])
+               ('ssl', ['openssl', 'openssl-static', 'darwinssl', 'winssl'])])
 
     name_prefix = 'authentication-tests'
 
@@ -773,6 +805,13 @@ all_tasks = chain(all_tasks, [
         tags=['test-asan'],
         depends_on='debug-compile-asan-clang',
         commands=[func('run mock server tests', ASAN='on', SSL='ssl')]),
+    PostCompileTask(
+        'test-mongohouse',
+        tags=[],
+        depends_on='debug-compile-sasl-openssl',
+        commands=[func('build mongohouse'),
+                  func('run mongohouse'),
+                  func('test mongohouse')]),
     # Compile with a function, not a task: gcov files depend on the absolute
     # path of the executable, so we can't compile as a separate task.
     NamedTask(

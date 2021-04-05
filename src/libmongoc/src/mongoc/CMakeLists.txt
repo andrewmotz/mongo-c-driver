@@ -41,10 +41,12 @@ set (src_libmongoc_src_mongoc_DIST_hs
    mongoc-macros.h
    mongoc-matcher.h
    mongoc-opcode.h
+   mongoc-optional.h
    mongoc-prelude.h
    mongoc-rand.h
    mongoc-read-concern.h
    mongoc-read-prefs.h
+   mongoc-server-api.h
    mongoc-server-description.h
    mongoc-client-session.h
    mongoc-socket.h
@@ -140,6 +142,7 @@ set (src_libmongoc_src_mongoc_DIST_noinst_hs
    mongoc-scram-private.h
    mongoc-secure-channel-private.h
    mongoc-secure-transport-private.h
+   mongoc-server-api-private.h
    mongoc-server-description-private.h
    mongoc-server-stream-private.h
    mongoc-server-monitor-private.h
@@ -157,6 +160,7 @@ set (src_libmongoc_src_mongoc_DIST_noinst_hs
    mongoc-stream-gridfs-download-private.h
    mongoc-stream-gridfs-upload-private.h
    mongoc-thread-private.h
+   mongoc-timeout-private.h
    mongoc-topology-description-apm-private.h
    mongoc-topology-description-private.h
    mongoc-topology-private.h
@@ -221,12 +225,14 @@ set (src_libmongoc_src_mongoc_DIST_cs
    mongoc-memcmp.c
    mongoc-cmd.c
    mongoc-ocsp-cache.c
+   mongoc-optional.c
    mongoc-opts.c
    mongoc-opts-helpers.c
    mongoc-queue.c
    mongoc-read-concern.c
    mongoc-read-prefs.c
    mongoc-rpc.c
+   mongoc-server-api.c
    mongoc-server-description.c
    mongoc-server-stream.c
    mongoc-client-session.c
@@ -240,6 +246,7 @@ set (src_libmongoc_src_mongoc_DIST_cs
    mongoc-stream-gridfs-download.c
    mongoc-stream-gridfs-upload.c
    mongoc-stream-socket.c
+   mongoc-timeout.c
    mongoc-topology.c
    mongoc-topology-description.c
    mongoc-topology-description-apm.c

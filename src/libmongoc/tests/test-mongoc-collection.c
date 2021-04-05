@@ -1893,7 +1893,7 @@ test_index_compound (void)
 }
 
 static void
-test_index_geo (void)
+test_index_geo (void *unused)
 {
    mongoc_server_description_t *description;
    mongoc_collection_t *collection;
@@ -6350,6 +6350,126 @@ test_remove_multi (void)
    mongoc_client_destroy (client);
 }
 
+static void
+test_fam_no_error_on_retry (void *unused)
+{
+   mongoc_client_t *client;
+   mongoc_collection_t *coll;
+   bson_error_t error = {0};
+   bool ret;
+   bson_t reply;
+   mongoc_find_and_modify_opts_t *opts;
+
+   client = test_framework_client_new ();
+   ret = mongoc_client_command_simple (
+      client,
+      "admin",
+      tmp_bson ("{'configureFailPoint': 'failCommand', 'mode': {'times': 1}, "
+                "'data': {'failCommands': ['findAndModify'], 'errorLabels': "
+                "['RetryableWriteError']}}"),
+      NULL,
+      &reply,
+      &error);
+
+   if (!ret) {
+      test_error ("configureFailPoint error: %s reply: %s",
+                  error.message,
+                  tmp_json (&reply));
+   }
+
+   coll = get_test_collection (client, BSON_FUNC);
+   opts = mongoc_find_and_modify_opts_new ();
+   mongoc_find_and_modify_opts_set_update (opts,
+                                           tmp_bson ("{'$set': {'x': 2}}"));
+   bson_destroy (&reply);
+   ret = mongoc_collection_find_and_modify_with_opts (
+      coll, tmp_bson ("{'x': 1}"), opts, &reply, &error);
+   if (!ret) {
+      test_error (
+         "findAndModify error: %s reply: %s", error.message, tmp_json (&reply));
+   }
+
+   if (error.code != 0 || error.domain != 0 ||
+       0 != strcmp (error.message, "")) {
+      test_error ("error set, but findAndModify succeeded: code=%" PRIu32
+                  " domain=%" PRIu32 " message=%s",
+                  error.code,
+                  error.domain,
+                  error.message);
+   }
+
+   bson_destroy (&reply);
+   mongoc_collection_destroy (coll);
+   mongoc_client_destroy (client);
+   mongoc_find_and_modify_opts_destroy (opts);
+}
+
+static void
+test_timeout_ms (void)
+{
+   mongoc_client_t *client = mongoc_client_new ("mongodb://localhost/?timeoutms=100");
+   mongoc_database_t *db = NULL;
+   mongoc_collection_t *coll =
+      mongoc_client_get_collection (client, "db", "test");
+   mongoc_collection_t *coll2 = NULL;
+   bool res;
+   bson_error_t error;
+
+   /* no timeoutMS returns client's timeoutMS */
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll), ==,
+		  mongoc_client_get_timeout_ms (client));
+
+   /* negative timeouts are invalid */
+   res = mongoc_collection_set_timeout_ms (coll, -1, &error);
+   BSON_ASSERT (!res);
+   ASSERT_ERROR_CONTAINS (error,
+                          MONGOC_ERROR_TIMEOUT,
+                          MONGOC_ERROR_TIMEOUT_INVALID,
+                          "timeoutMS must be a non-negative integer");
+
+   /* successful timeouts */
+   ASSERT_OR_PRINT (mongoc_collection_set_timeout_ms (coll, 300, &error),
+                    error);
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll), ==, 300);
+
+   ASSERT_OR_PRINT (mongoc_collection_set_timeout_ms (coll, 100, &error),
+                    error);
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll), ==, 100);
+
+   ASSERT_OR_PRINT (mongoc_collection_set_timeout_ms (coll, 0, &error), error);
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll), ==, 0);
+
+   BSON_ASSERT (mongoc_collection_get_timeout_ms (coll) !=
+                MONGOC_TIMEOUTMS_UNSET);
+
+   /* Integer limits */
+   ASSERT_OR_PRINT (mongoc_collection_set_timeout_ms (coll, INT64_MAX, &error),
+                    error);
+   ASSERT_CMPINT64 (mongoc_collection_get_timeout_ms (coll), ==, INT64_MAX);
+   BSON_ASSERT (!mongoc_collection_set_timeout_ms (coll, INT64_MIN, &error));
+
+   /* When a database is involved, inheritance chain changes */
+   db = mongoc_client_get_database (client, "test");
+   ASSERT_OR_PRINT (mongoc_database_set_timeout_ms (db, 50, &error), error);
+
+   coll2 = mongoc_database_get_collection (db, "test");
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll2),
+                  ==,
+                  mongoc_database_get_timeout_ms (db));
+
+   /* We do not track parent db timeout changes over time, though */
+   ASSERT_OR_PRINT (mongoc_database_set_timeout_ms (db, 200, &error), error);
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll2), ==, 50);
+
+   ASSERT_OR_PRINT (mongoc_collection_set_timeout_ms (coll2, 300, &error),
+                    error);
+   ASSERT_CMPINT (mongoc_collection_get_timeout_ms (coll2), ==, 300);
+
+   mongoc_collection_destroy (coll);
+   mongoc_collection_destroy (coll2);
+   mongoc_database_destroy (db);
+   mongoc_client_destroy (client);
+}
 
 void
 test_collection_install (TestSuite *suite)
@@ -6398,7 +6518,12 @@ test_collection_install (TestSuite *suite)
    TestSuite_AddMockServerTest (
       suite, "/Collection/index/collation/wire5", test_index_with_collation_ok);
    TestSuite_AddLive (suite, "/Collection/index_compound", test_index_compound);
-   TestSuite_AddLive (suite, "/Collection/index_geo", test_index_geo);
+   TestSuite_AddFull (suite,
+                      "/Collection/index_geo",
+                      test_index_geo,
+                      NULL,
+                      NULL,
+                      test_framework_skip_if_max_wire_version_more_than_9);
    TestSuite_AddLive (suite, "/Collection/index_storage", test_index_storage);
    TestSuite_AddLive (suite, "/Collection/regex", test_regex);
    TestSuite_AddFull (suite,
@@ -6589,4 +6714,12 @@ test_collection_install (TestSuite *suite)
                       NULL,
                       NULL,
                       test_framework_skip_if_not_replset);
+   TestSuite_AddFull (suite,
+                      "/Collection/fam/no_error_on_retry",
+                      test_fam_no_error_on_retry,
+                      NULL,
+                      NULL,
+                      test_framework_skip_if_no_failpoint,
+                      test_framework_skip_if_max_wire_version_more_than_9);
+   TestSuite_Add (suite, "/Collection/timeout_ms", test_timeout_ms);
 }

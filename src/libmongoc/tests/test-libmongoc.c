@@ -111,6 +111,8 @@ test_client_pool_install (TestSuite *suite);
 extern void
 test_client_cmd_install (TestSuite *suite);
 extern void
+test_client_versioned_api_install (TestSuite *suite);
+extern void
 test_cluster_install (TestSuite *suite);
 extern void
 test_collection_install (TestSuite *suite);
@@ -237,6 +239,8 @@ test_counters_install (TestSuite *suite);
 extern void
 test_crud_install (TestSuite *suite);
 extern void
+test_mongohouse_install (TestSuite *suite);
+extern void
 test_apm_install (TestSuite *suite);
 extern void
 test_client_side_encryption_install (TestSuite *suite);
@@ -258,6 +262,16 @@ extern void
 test_monitoring_install (TestSuite *suite);
 extern void
 test_http_install (TestSuite *suite);
+extern void
+test_install_unified (TestSuite *suite);
+extern void
+test_timeout_install (TestSuite *suite);
+extern void
+test_bson_match_install (TestSuite *suite);
+extern void
+test_bson_util_install (TestSuite *suite);
+extern void
+test_result_install (TestSuite *suite);
 
 typedef struct {
    mongoc_log_level_t level;
@@ -1365,6 +1379,45 @@ test_framework_get_uri ()
    return uri;
 }
 
+bool
+test_framework_uri_apply_multi_mongos (mongoc_uri_t *uri,
+                                       bool use_multi,
+                                       bson_error_t *error)
+{
+   bool ret = false;
+
+   if (!test_framework_is_mongos ()) {
+      ret = true;
+      goto done;
+   }
+
+   /* TODO: Once CDRIVER-3285 is resolved, update this to no longer hardcode the
+    * hosts. */
+   if (use_multi) {
+      if (!mongoc_uri_upsert_host_and_port (uri, "localhost:27017", error)) {
+         goto done;
+      }
+      if (!mongoc_uri_upsert_host_and_port (uri, "localhost:27018", error)) {
+         goto done;
+      }
+   } else {
+      const mongoc_host_list_t *hosts;
+
+      hosts = mongoc_uri_get_hosts (uri);
+      if (hosts->next) {
+         test_set_error (error,
+                         "useMultiMongoses is false, so expected single "
+                         "host listed, but got: %s",
+                         mongoc_uri_get_string (uri));
+         goto done;
+      }
+   }
+
+   ret = true;
+done:
+   return ret;
+}
+
 
 /*
  *--------------------------------------------------------------------------
@@ -2154,6 +2207,15 @@ test_framework_skip_if_single (void)
 }
 
 int
+test_framework_skip_if_no_mongohouse (void)
+{
+   if (!getenv ("RUN_MONGOHOUSE_TESTS")) {
+      return 0;
+   }
+   return 1;
+}
+
+int
 test_framework_skip_if_mongos (void)
 {
    if (!TestSuite_CheckLive ()) {
@@ -2583,6 +2645,7 @@ main (int argc, char *argv[])
    test_client_hedged_reads_install (&suite);
    test_client_pool_install (&suite);
    test_client_cmd_install (&suite);
+   test_client_versioned_api_install (&suite);
    test_write_command_install (&suite);
    test_bulk_install (&suite);
    test_cluster_install (&suite);
@@ -2650,6 +2713,7 @@ main (int argc, char *argv[])
    test_happy_eyeballs_install (&suite);
    test_counters_install (&suite);
    test_crud_install (&suite);
+   test_mongohouse_install (&suite);
    test_apm_install (&suite);
    test_client_side_encryption_install (&suite);
    test_server_description_install (&suite);
@@ -2661,6 +2725,11 @@ main (int argc, char *argv[])
    test_interrupt_install (&suite);
    test_monitoring_install (&suite);
    test_http_install (&suite);
+   test_install_unified (&suite);
+   test_timeout_install (&suite);
+   test_bson_match_install (&suite);
+   test_bson_util_install (&suite);
+   test_result_install (&suite);
 
    ret = TestSuite_Run (&suite);
 

@@ -1414,7 +1414,8 @@ set_auto_encryption_opts (mongoc_client_t *client, bson_t *test)
       bson_t tmp;
 
       bson_iter_bson (&iter, &tmp);
-      bson_copy_to_excluding (&tmp, &kms_providers, "aws", NULL);
+      bson_copy_to_excluding (
+         &tmp, &kms_providers, "aws", "azure", "gcp", NULL);
 
       /* AWS credentials are set from environment variables. */
       if (bson_has_field (&opts, "kmsProviders.aws")) {
@@ -1443,6 +1444,64 @@ set_auto_encryption_opts (mongoc_client_t *client, bson_t *test)
 
          bson_free (aws_secret_access_key);
          bson_free (aws_access_key_id);
+      }
+
+      if (bson_has_field (&opts, "kmsProviders.azure")) {
+         char *azure_tenant_id;
+         char *azure_client_id;
+         char *azure_client_secret;
+
+         azure_tenant_id =
+            test_framework_getenv ("MONGOC_TEST_AZURE_TENANT_ID");
+         azure_client_id =
+            test_framework_getenv ("MONGOC_TEST_AZURE_CLIENT_ID");
+         azure_client_secret =
+            test_framework_getenv ("MONGOC_TEST_AZURE_CLIENT_SECRET");
+
+         if (!azure_tenant_id || !azure_client_id || !azure_client_secret) {
+            fprintf (stderr,
+                     "Set MONGOC_TEST_AZURE_TENANT_ID, "
+                     "MONGOC_TEST_AZURE_CLIENT_ID, and "
+                     "MONGOC_TEST_AZURE_CLIENT_SECRET to enable CSFLE "
+                     "tests.");
+            abort ();
+         }
+
+         bson_concat (&kms_providers,
+                      tmp_bson ("{ 'azure': { 'tenantId': '%s', 'clientId': "
+                                "'%s', 'clientSecret': '%s' }}",
+                                azure_tenant_id,
+                                azure_client_id,
+                                azure_client_secret));
+
+         bson_free (azure_tenant_id);
+         bson_free (azure_client_id);
+         bson_free (azure_client_secret);
+      }
+
+      if (bson_has_field (&opts, "kmsProviders.gcp")) {
+         char *gcp_email;
+         char *gcp_privatekey;
+
+         gcp_email = test_framework_getenv ("MONGOC_TEST_GCP_EMAIL");
+         gcp_privatekey = test_framework_getenv ("MONGOC_TEST_GCP_PRIVATEKEY");
+
+         if (!gcp_email || !gcp_privatekey) {
+            fprintf (stderr,
+                     "Set MONGOC_TEST_GCP_EMAIL and "
+                     "MONGOC_TEST_GCP_PRIVATEKEY to enable CSFLE "
+                     "tests.");
+            abort ();
+         }
+
+         bson_concat (
+            &kms_providers,
+            tmp_bson ("{ 'gcp': { 'email': '%s', 'privateKey': '%s' }}",
+                      gcp_email,
+                      gcp_privatekey));
+
+         bson_free (gcp_email);
+         bson_free (gcp_privatekey);
       }
 
       mongoc_auto_encryption_opts_set_kms_providers (auto_encryption_opts,
@@ -1635,7 +1694,8 @@ run_json_general_test (const json_test_config_t *config)
 
       bson_free (selected_test);
 
-      uri = test_framework_get_uri ();
+      uri = (config->uri_str != NULL) ? mongoc_uri_new (config->uri_str)
+                                      : test_framework_get_uri ();
 
       /* If we are using multiple mongos, hardcode them in, for now, but keep
        * the other URI components (CDRIVER-3285) */
@@ -1677,9 +1737,11 @@ run_json_general_test (const json_test_config_t *config)
                                            NULL,
                                            &error);
 
-      /* expect "operation was interrupted", ignore "command not found" */
+      /* expect "operation was interrupted", ignore "command not found" or "is
+       * not supported" */
       if (!r && (error.domain != MONGOC_ERROR_SERVER ||
-                 (error.code != 11601 && error.code != 59))) {
+                 (error.code != 11601 && error.code != 59)) &&
+          (strstr (error.message, "is unsupported") == NULL)) {
          MONGOC_WARNING ("Error in killAllSessions: %s", error.message);
       }
 

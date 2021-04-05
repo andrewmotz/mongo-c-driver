@@ -122,6 +122,7 @@ if (NOT ENABLE_ZSTD STREQUAL OFF)
       set (MONGOC_ENABLE_COMPRESSION_ZSTD 1)
 
       include_directories (${ZSTD_INCLUDE_DIRS})
+      link_directories (${ZSTD_LIBRARY_DIRS})
       if (${CMAKE_VERSION} VERSION_LESS "3.12.0")
          set (MONGOC_ZSTD_LIBRARIES ${ZSTD_LIBRARIES})
       else ()
@@ -423,7 +424,18 @@ elseif (NOT ENABLE_CLIENT_SIDE_ENCRYPTION STREQUAL OFF)
       find_package (mongocrypt QUIET)
    endif ()
 
-   if (mongocrypt_FOUND)
+   if (mongocrypt_FOUND AND "${mongocrypt_VERSION}" VERSION_LESS 1.1.0)
+      message ("--   libmongocrypt found at ${LIBMONGOCRYPT_LIBRARY}")
+      message ("--   libmongocrypt version ${mongocrypt_VERSION} found")
+      message ("--   libmongocrypt version 1.1.0 is required to enable Client-Side Field Level Encryption Support.")
+      set (REQUIRED_MONGOCRYPT_VERSION_FOUND OFF)
+   elseif (mongocrypt_FOUND)
+      set (REQUIRED_MONGOCRYPT_VERSION_FOUND ON)
+   else ()
+      set (REQUIRED_MONGOCRYPT_VERSION_FOUND OFF)
+   endif ()
+
+   if (REQUIRED_MONGOCRYPT_VERSION_FOUND)
       set (LIBMONGOCRYPT_TARGET mongo::mongocrypt)
       get_target_property (LIBMONGOCRYPT_RUNTIME_LIBRARY mongo::mongocrypt LOCATION)
       get_filename_component(LIBMONGOCRYPT_LIBRARY_LOCATION ${LIBMONGOCRYPT_RUNTIME_LIBRARY} DIRECTORY)
@@ -517,12 +529,14 @@ set (SOURCES ${SOURCES}
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-matcher-op.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-memcmp.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-cmd.c
+   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-optional.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-opts-helpers.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-opts.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-queue.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-read-concern.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-read-prefs.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-rpc.c
+   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-server-api.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-server-description.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-server-stream.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-client-session.c
@@ -537,6 +551,7 @@ set (SOURCES ${SOURCES}
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-stream-gridfs-download.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-stream-gridfs-upload.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-stream-socket.c
+   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-timeout.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-topology.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-topology-background-monitoring.c
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-topology-description.c
@@ -583,9 +598,11 @@ set (HEADERS
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-macros.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-matcher.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-opcode.h
+   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-optional.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-prelude.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-read-concern.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-read-prefs.h
+   ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-server-api.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-server-description.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-client-session.h
    ${PROJECT_SOURCE_DIR}/src/mongoc/mongoc-socket.h
@@ -631,6 +648,8 @@ if (NOT ENABLE_SSL STREQUAL OFF)
       include_directories (${OPENSSL_INCLUDE_DIR})
       if (WIN32)
          set (SSL_LIBRARIES ${SSL_LIBRARIES} crypt32.lib)
+      else ()
+         set (SSL_STATIC_LIBRARIES ${CMAKE_DL_LIBS})
       endif ()
    elseif (SECURE_TRANSPORT)
       message (STATUS "Compiling against Secure Transport")
@@ -693,7 +712,7 @@ set (LIBRARIES
    ${SNAPPY_LIBRARIES} ${ZLIB_LIBRARIES} ${MONGOC_ZSTD_LIBRARIES} Threads::Threads ${ICU_LIBRARIES} ${LIBMONGOCRYPT_LIBRARY}
 )
 set (STATIC_LIBRARIES
-   ${SASL_LIBRARIES} ${SSL_LIBRARIES} ${SHM_LIBRARIES} ${RESOLV_LIBRARIES}
+   ${SASL_LIBRARIES} ${SSL_LIBRARIES} ${SSL_STATIC_LIBRARIES} ${SHM_LIBRARIES} ${RESOLV_LIBRARIES}
    ${SNAPPY_LIBRARIES} ${ZLIB_LIBRARIES} ${MONGOC_ZSTD_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${ICU_LIBRARIES} ${LIBMONGOCRYPT_LIBRARY}
 )
 
@@ -888,6 +907,9 @@ set (test-libmongoc-sources
    ${PROJECT_SOURCE_DIR}/../../src/libbson/tests/test-utf8.c
    ${PROJECT_SOURCE_DIR}/../../src/libbson/tests/test-value.c
    ${PROJECT_SOURCE_DIR}/../../src/libbson/tests/test-writer.c
+   ${PROJECT_SOURCE_DIR}/tests/bsonutil/bson-match.c
+   ${PROJECT_SOURCE_DIR}/tests/bsonutil/bson-parser.c
+   ${PROJECT_SOURCE_DIR}/tests/bsonutil/bson-val.c
    ${PROJECT_SOURCE_DIR}/tests/debug-stream.c
    ${PROJECT_SOURCE_DIR}/tests/json-test-monitoring.c
    ${PROJECT_SOURCE_DIR}/tests/json-test-operations.c
@@ -942,6 +964,7 @@ set (test-libmongoc-sources
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-long-namespace.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-matcher.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-max-staleness.c
+   ${PROJECT_SOURCE_DIR}/tests/test-mongoc-mongohouse.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-mongos-pinning.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-opts.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-primary-stepdown.c
@@ -965,6 +988,7 @@ set (test-libmongoc-sources
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-stream.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-streamable-ismaster.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-thread.c
+   ${PROJECT_SOURCE_DIR}/tests/test-mongoc-timeout.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-topology-description.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-topology-reconcile.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-topology-scanner.c
@@ -974,10 +998,17 @@ set (test-libmongoc-sources
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-usleep.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-util.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-version.c
+   ${PROJECT_SOURCE_DIR}/tests/test-mongoc-versioned-api.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-with-transaction.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-write-commands.c
    ${PROJECT_SOURCE_DIR}/tests/test-mongoc-write-concern.c
    ${PROJECT_SOURCE_DIR}/tests/TestSuite.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/operation.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/entity-map.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/result.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/runner.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/test-diagnostics.c
+   ${PROJECT_SOURCE_DIR}/tests/unified/util.c
 )
 
 if (MONGOC_ENABLE_SSL)

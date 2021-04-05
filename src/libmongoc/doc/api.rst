@@ -38,6 +38,7 @@ API Reference
    mongoc_insert_flags_t
    mongoc_iovec_t
    mongoc_matcher_t
+   mongoc_optional_t
    mongoc_query_flags_t
    mongoc_rand
    mongoc_read_concern_t
@@ -45,6 +46,8 @@ API Reference
    mongoc_read_prefs_t
    mongoc_remove_flags_t
    mongoc_reply_flags_t
+   mongoc_server_api_t
+   mongoc_server_api_version_t
    mongoc_server_description_t
    mongoc_session_opt_t
    mongoc_socket_t

@@ -23,6 +23,11 @@
 #include "mongoc/mongoc-read-prefs-private.h"
 #include "mongoc/mongoc-client-private.h"
 
+/* TODO: split this header up.
+ * Move bson_lookup_* functions under bsonutil.
+ * Move temporary helpers into a separate header.
+ */
+
 /* Initialize global test convenience structures.
  * Safe to call repeatedly, or after calling test_conveniences_cleanup().
  */
@@ -36,8 +41,22 @@ test_conveniences_init ();
 void
 test_conveniences_cleanup ();
 
+/* Return a bson_t representation from a single-quoted JSON string, with
+ * possible printf format directives.
+ * bson_t is freed automatically at test cleanup.
+ * E.g. tmp_bson ("{'key': %d}", 123); */
 bson_t *
 tmp_bson (const char *json, ...);
+
+/* Return a string, with possible printf format directives. String is
+ * automatically freed at test cleanup. */
+const char *
+tmp_str (const char *fmt, ...);
+
+/* Return a JSON string representation of BSON. String is freed automatically at
+ * test cleanup. */
+const char *
+tmp_json (const bson_t *bson);
 
 void
 bson_iter_bson (const bson_iter_t *iter, bson_t *bson);
@@ -71,6 +90,9 @@ value_init_from_doc (bson_value_t *value, const bson_t *doc);
 
 void
 bson_lookup_value (const bson_t *b, const char *key, bson_value_t *value);
+
+bson_t *
+bson_lookup_bson (const bson_t *b, const char *key);
 
 void
 bson_lookup_doc (const bson_t *b, const char *key, bson_t *doc);
@@ -213,5 +235,50 @@ match_err (match_ctx_t *ctx, const char *fmt, ...);
 
 void
 assert_wc_oob_error (bson_error_t *error);
+
+typedef struct {
+   int major;
+   int minor;
+   bool has_minor;
+   int patch;
+   bool has_patch;
+} semver_t;
+
+void
+semver_parse (const char *str, semver_t *out);
+
+void
+server_semver (mongoc_client_t *client, semver_t *out);
+
+int
+semver_cmp (semver_t *a, semver_t *b);
+
+int
+semver_cmp_str (semver_t *a, const char *str);
+
+const char *
+semver_to_string (semver_t *str);
+
+/* Iterate over a BSON document or array.
+ *
+ * Example of iterating and printing an array of BSON documents:
+ *
+ * bson_iter_t iter;
+ * bson_t *arr = my_func();
+ *
+ * BSON_FOREACH (arr, iter) {
+ *    bson_t el;
+ *    bson_iter_bson (&iter, &el);
+ *    printf ("%d: %s", bson_iter_key (&iter), tmp_json (&el));
+ * }
+ */
+#define BSON_FOREACH(bson, iter_varname)          \
+   for (bson_iter_init (&(iter_varname), (bson)); \
+        bson_iter_next (&(iter_varname));)
+
+#define TEST_ERROR_DOMAIN 123456
+#define TEST_ERROR_CODE 654321
+#define test_set_error(error, ...) \
+   bson_set_error (error, TEST_ERROR_DOMAIN, TEST_ERROR_CODE, __VA_ARGS__)
 
 #endif /* TEST_CONVENIENCES_H */
