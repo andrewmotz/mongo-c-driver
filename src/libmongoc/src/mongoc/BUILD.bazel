@@ -47,6 +47,13 @@ cc_library(
         "//:no_ssl": [],
         "//:openssl": _ssl_defines,
         "//:boringssl": _ssl_defines,
+    }) + select({
+        "@platforms//os:windows": ["MONGOC_HAVE_DNSAPI=1"],
+        "//conditions:default": [
+            "MONGOC_HAVE_RES_NSEARCH=1",
+            "MONGOC_HAVE_RES_NCLOSE=1",
+            "MONGOC_HAVE_RES_SEARCH=1",
+        ],
     }),
     deps = [
         "//src/libbson/src/bson",
@@ -59,7 +66,8 @@ cc_library(
         "@bazel_tools//tools/cpp:msvc": ["/w"],
         "//conditions:default": ["-w"],
     }),
-    linkopts = [
-        "-DEFAULTLIB:Advapi32",
-    ],
+    linkopts = select({
+        "@platforms//os:windows": ["-DEFAULTLIB:Advapi32"],
+        "//conditions:default": ["-lresolv"],
+    }),
 )
