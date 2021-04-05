@@ -46,6 +46,30 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:public"])
 
+constraint_setting(
+    name = "ssl",
+    visibility = ["//visibility:public"],
+    default_constraint_value = ":no_ssl",
+)
+
+constraint_value(
+    name = "no_ssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
+constraint_value(
+    name = "openssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
+constraint_value(
+    name = "boringssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
 cc_library(
     name = "mongoc_config",
     hdrs = ["mongoc-config.h"],

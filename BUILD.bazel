@@ -1,3 +1,27 @@
+constraint_setting(
+    name = "ssl",
+    visibility = ["//visibility:public"],
+    default_constraint_value = ":no_ssl",
+)
+
+constraint_value(
+    name = "no_ssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
+constraint_value(
+    name = "openssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
+constraint_value(
+    name = "boringssl",
+    visibility = ["//visibility:public"],
+    constraint_setting = "ssl",
+)
+
 alias(
     name = "libbson",
     visibility = ["//visibility:public"],
