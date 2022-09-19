@@ -43,11 +43,9 @@ cc_library(
     strip_include_prefix = ".",
     include_prefix = "mongoc",
     includes = ["."],
-    defines = _defines + select({
-        "//:no_ssl": [],
+    defines = _defines + {
         "//:openssl": _ssl_defines,
-        "//:boringssl": _ssl_defines,
-    }) + select({
+    } + select({
         "@platforms//os:windows": ["MONGOC_HAVE_DNSAPI=1"],
         "//conditions:default": [
             "MONGOC_HAVE_RES_NSEARCH=1",
@@ -57,11 +55,9 @@ cc_library(
     }),
     deps = [
         "//src/libbson/src/bson",
-    ] +  select({
-        "//:no_ssl": [],
+    ] +  {
         "//:openssl": ["@org_openssl//:ssl"],
-        "//:boringssl": ["@boringssl//:ssl"],
-    }),
+    },
     copts = select({
         "@bazel_tools//tools/cpp:msvc": ["/w"],
         "//conditions:default": ["-w"],
