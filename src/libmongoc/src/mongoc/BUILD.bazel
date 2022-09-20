@@ -54,7 +54,7 @@ cc_library(
     }),
     deps = [
         "//src/libbson/src/bson",
-        "@boringssl//:ssl"],
+        "@openssl//:openssl"],
     copts = select({
         "@bazel_tools//tools/cpp:msvc": ["/w"],
         "//conditions:default": ["-w"],
